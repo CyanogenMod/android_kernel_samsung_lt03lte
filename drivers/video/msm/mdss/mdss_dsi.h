@@ -255,7 +255,7 @@ struct mdss_dsi_ctrl_pdata {
 #endif
 	int (*partial_update_fnc) (struct mdss_panel_data *pdata);
 	int (*check_status) (struct mdss_dsi_ctrl_pdata *pdata);
-	void (*cmdlist_commit)(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
+	int (*cmdlist_commit)(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
 	int (*registered) (struct mdss_panel_data *pdata);
 	int (*dimming_init) (struct mdss_panel_data *pdata);
 	int (*event_handler) (int e);
@@ -419,7 +419,7 @@ int mdss_dsi_cmds_single_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 void mdss_dsi_ctrl_init(struct mdss_dsi_ctrl_pdata *ctrl);
 void mdss_dsi_cmd_mdp_busy(struct mdss_dsi_ctrl_pdata *ctrl);
 void mdss_dsi_wait4video_done(struct mdss_dsi_ctrl_pdata *ctrl);
-void mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
+int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
 void mdss_dsi_cmdlist_kickoff(int intf);
 int mdss_dsi_bta_status_check(struct mdss_dsi_ctrl_pdata *ctrl);
 
@@ -432,5 +432,8 @@ void mdss_dsi_dump_power_clk(struct mdss_panel_data *pdata, int flag);
 /*for mondrian*/
 void pwm_backlight_enable(void);
 void pwm_backlight_disable(void);
+
+int mdss_dsi_register_recovery_handler(struct mdss_dsi_ctrl_pdata *ctrl,
+		struct mdss_panel_recovery *recovery);
 
 #endif /* MDSS_DSI_H */

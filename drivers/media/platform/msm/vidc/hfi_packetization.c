@@ -342,6 +342,12 @@ static int get_hfi_extradata_index(enum hal_extradata_id index)
 	case HAL_EXTRADATA_RECOVERY_POINT_SEI:
 		ret = HFI_PROPERTY_PARAM_VDEC_RECOVERY_POINT_SEI_EXTRADATA;
 		break;
+	case HAL_EXTRADATA_CLOSED_CAPTION_UD:
+		ret = HFI_PROPERTY_PARAM_VDEC_CLOSED_CAPTION_EXTRADATA;
+		break;
+	case HAL_EXTRADATA_AFD_UD:
+		ret = HFI_PROPERTY_PARAM_VDEC_AFD_EXTRADATA;
+		break;
 	case HAL_EXTRADATA_MULTISLICE_INFO:
 		ret = HFI_PROPERTY_PARAM_VENC_MULTI_SLICE_INFO;
 		break;
@@ -354,20 +360,11 @@ static int get_hfi_extradata_index(enum hal_extradata_id index)
 	case HAL_EXTRADATA_MPEG2_SEQDISP:
 		ret = HFI_PROPERTY_PARAM_VDEC_MPEG2_SEQDISP_EXTRADATA;
 		break;
-	case HAL_EXTRADATA_FRAME_QP:
-		ret = HFI_PROPERTY_PARAM_VDEC_FRAME_QP_EXTRADATA;
-		break;
-	case HAL_EXTRADATA_FRAME_BITS_INFO:
-		ret = HFI_PROPERTY_PARAM_VDEC_FRAME_BITS_INFO_EXTRADATA;
-		break;
 	case HAL_EXTRADATA_LTR_INFO:
 		ret = HFI_PROPERTY_PARAM_VENC_LTR_INFO;
 		break;
 	case HAL_EXTRADATA_METADATA_MBI:
 		ret = HFI_PROPERTY_PARAM_VENC_MBI_DUMPING;
-		break;
-	case HAL_EXTRADATA_STREAM_USERDATA:
-		ret = HFI_PROPERTY_PARAM_VDEC_STREAM_USERDATA_EXTRADATA;
 		break;
 	default:
 		dprintk(VIDC_WARN, "Extradata index not found: %d\n", index);
@@ -1436,6 +1433,22 @@ int create_pkt_cmd_session_set_property(
 		pkt->size += sizeof(u32) + sizeof(struct hfi_enable);
 		break;
 	}
+	case HAL_PARAM_VPE_COLOR_SPACE_CONVERSION:
+	{
+		struct hfi_vpe_color_space_conversion *hfi = NULL;
+		struct hal_vpe_color_space_conversion *hal = pdata;
+		pkt->rg_property_data[0] =
+				HFI_PROPERTY_PARAM_VPE_COLOR_SPACE_CONVERSION;
+		hfi = (struct hfi_vpe_color_space_conversion *)
+			&pkt->rg_property_data[1];
+		*hfi = *(struct hfi_vpe_color_space_conversion *) hal;
+		pkt->size += sizeof(u32) +
+				sizeof(struct hal_vpe_color_space_conversion);
+
+		dprintk(VIDC_DBG, "%s HAL_PARAM_VPE_COLOR_SPACE_CONVERSION\n",
+				__func__);
+		break;
+	}
 	case HAL_PARAM_VENC_LTRMODE:
 	{
 		struct hfi_ltrmode *hfi;
@@ -1482,36 +1495,6 @@ int create_pkt_cmd_session_set_property(
 			HFI_PROPERTY_PARAM_VENC_HIER_P_NUM_ENH_LAYER;
 		pkt->rg_property_data[1] = *(u32 *)pdata;
 		pkt->size += sizeof(u32) * 2;
-		break;
-	}
-	case HAL_PARAM_VPE_COLOR_SPACE_CONVERSION:
-	{
-		struct hfi_vpe_color_space_conversion *hfi = NULL;
-		struct hal_vpe_color_space_conversion *hal = pdata;
-		pkt->rg_property_data[0] =
-				HFI_PROPERTY_PARAM_VPE_COLOR_SPACE_CONVERSION;
-		hfi = (struct hfi_vpe_color_space_conversion *)
-			&pkt->rg_property_data[1];
-		*hfi = *(struct hfi_vpe_color_space_conversion *) hal;
-		pkt->size += sizeof(u32) +
-				sizeof(struct hal_vpe_color_space_conversion);
-
-		dprintk(VIDC_DBG, "%s HAL_PARAM_VPE_COLOR_SPACE_CONVERSION\n",
-				__func__);
-		break;
-	}
-	case HAL_PARAM_VENC_ENABLE_INITIAL_QP:
-	{
-		struct hfi_initial_quantization *hfi;
-		struct hal_initial_quantization *quant = pdata;
-		pkt->rg_property_data[0] =
-			HFI_PROPERTY_PARAM_VENC_INITIAL_QP;
-		hfi = (struct hfi_initial_quantization *) &pkt->rg_property_data[1];
-		hfi->init_qp_enable = quant->initqp_enable;
-		hfi->qp_i = quant->qpi;
-		hfi->qp_p = quant->qpp;
-		hfi->qp_b = quant->qpb;
-		pkt->size += sizeof(u32) + sizeof(struct hfi_initial_quantization);
 		break;
 	}
 	/* FOLLOWING PROPERTIES ARE NOT IMPLEMENTED IN CORE YET */

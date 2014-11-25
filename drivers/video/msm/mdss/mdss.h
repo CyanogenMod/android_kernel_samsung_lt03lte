@@ -158,7 +158,6 @@ struct mdss_data_type {
 
 	struct mdss_fudge_factor ab_factor;
 	struct mdss_fudge_factor ib_factor;
-	struct mdss_fudge_factor ib_factor_overlap;
 	struct mdss_fudge_factor clk_factor;
 
 	struct mdss_hw_settings *hw_settings;
@@ -202,7 +201,6 @@ struct mdss_data_type {
 	struct mdss_panel_cfg pan_cfg;
 
 	int handoff_pending;
-
 	struct mdss_prefill_data prefill_data;
 
 	int iommu_ref_cnt;
@@ -243,14 +241,14 @@ static inline struct ion_client *mdss_get_ionclient(void)
 	if (!mdss_res)
 		return NULL;
 	return mdss_res->iclient;
-};
+}
 
 static inline int is_mdss_iommu_attached(void)
 {
 	if (!mdss_res)
 		return false;
 	return mdss_res->iommu_attached;
-};
+}
 
 static inline int mdss_get_iommu_domain(u32 type)
 {
@@ -261,5 +259,5 @@ static inline int mdss_get_iommu_domain(u32 type)
 		return -ENODEV;
 
 	return mdss_res->iommu_map[type].domain_idx;
-};
+}
 #endif /* MDSS_H */

@@ -25,7 +25,6 @@
 #include <linux/slab.h>
 #include <linux/msm_audio.h>
 
-#include <linux/memory_alloc.h>
 #include <linux/debugfs.h>
 #include <linux/time.h>
 #include <linux/atomic.h>
@@ -475,7 +474,6 @@ void send_asm_custom_topology(struct audio_client *ac)
 			__func__, cal_block.cal_paddr);
 		goto err_unmap;
 	}
-
 	return;
 err_unmap:
 	q6asm_memory_unmap_regions(ac, IN);
@@ -856,7 +854,8 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 
 	if (ac->apr == NULL) {
 		pr_err("%s Registration with APR failed\n", __func__);
-			goto fail_apr1;
+		mutex_unlock(&session_lock);
+		goto fail_apr1;
 	}
 	ac->apr2 = apr_register("ADSP", "ASM", \
 				(apr_fn)q6asm_callback,\
@@ -865,14 +864,18 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 
 	if (ac->apr2 == NULL) {
 		pr_err("%s Registration with APR-2 failed\n", __func__);
-			goto fail_apr2;
+		mutex_unlock(&session_lock);
+		goto fail_apr2;
 	}
+
 	rtac_set_asm_handle(n, ac->apr);
 
 	pr_debug("%s Registering the common port with APR\n", __func__);
 	ac->mmap_apr = q6asm_mmap_apr_reg();
-	if (ac->mmap_apr == NULL)
+	if (ac->mmap_apr == NULL) {
+		mutex_unlock(&session_lock);
 		goto fail_mmap;
+	}
 
 	init_waitqueue_head(&ac->cmd_wait);
 	init_waitqueue_head(&ac->time_wait);
