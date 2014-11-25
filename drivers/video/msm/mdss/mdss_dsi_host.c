@@ -28,6 +28,7 @@
 #include "mdss_dsi.h"
 #include "mdss_panel.h"
 #include "mdss_debug.h"
+
 #define VSYNC_PERIOD 17
 
 struct mdss_dsi_ctrl_pdata *left_ctrl_pdata;
@@ -95,8 +96,6 @@ void mdss_dsi_ctrl_init(struct mdss_dsi_ctrl_pdata *ctrl)
 		ctrl->ndx = DSI_CTRL_1;
 	}
 
-	ctrl->panel_mode = ctrl->panel_data.panel_info.mipi.mode;
-
 	ctrl_list[ctrl->ndx] = ctrl;	/* keep it */
 
 	if (mdss_register_irq(ctrl->dsi_hw))
@@ -134,7 +133,6 @@ void mdss_dsi_clk_req(struct mdss_dsi_ctrl_pdata *ctrl, int enable)
 		mdss_dsi_cmd_mdp_busy(ctrl);
 		mutex_unlock(&ctrl->cmd_mutex);
 	}
-
 	MDSS_XLOG(ctrl->ndx, enable, ctrl->mdp_busy, current->pid);
 	mdss_dsi_clk_ctrl(ctrl, enable);
 }
@@ -159,9 +157,6 @@ void mdss_dsi_enable_irq(struct mdss_dsi_ctrl_pdata *ctrl, u32 term)
 	unsigned long flags;
 
 	spin_lock_irqsave(&ctrl->irq_lock, flags);
-#if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
-	xlog(__func__, ctrl->ndx, term, ctrl->dsi_irq_mask, (u32)ctrl->dsi_hw, 0, 0xB);
-#endif
 	if (ctrl->dsi_irq_mask & term) {
 		spin_unlock_irqrestore(&ctrl->irq_lock, flags);
 		return;
@@ -169,13 +164,13 @@ void mdss_dsi_enable_irq(struct mdss_dsi_ctrl_pdata *ctrl, u32 term)
 	if (ctrl->dsi_irq_mask == 0) {
 		MDSS_XLOG(ctrl->ndx, term);
 		mdss_enable_irq(ctrl->dsi_hw);
+ #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
+ 	xlog(__func__, ctrl->ndx, term, 0, 0, 0, 0);
+ #endif
 		pr_debug("%s: IRQ Enable, ndx=%d mask=%x term=%x\n", __func__,
 			ctrl->ndx, (int)ctrl->dsi_irq_mask, (int)term);
 	}
 	ctrl->dsi_irq_mask |= term;
-#if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
-	xlog(__func__, ctrl->ndx, term, ctrl->dsi_irq_mask, (u32)ctrl->dsi_hw, 0, 0xE);
-#endif
 	spin_unlock_irqrestore(&ctrl->irq_lock, flags);
 }
 
@@ -184,9 +179,6 @@ void mdss_dsi_disable_irq(struct mdss_dsi_ctrl_pdata *ctrl, u32 term)
 	unsigned long flags;
 
 	spin_lock_irqsave(&ctrl->irq_lock, flags);
-#if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
-	xlog(__func__, ctrl->ndx, term, ctrl->dsi_irq_mask, (u32)ctrl->dsi_hw, 0, 0xB);
-#endif
 	if (!(ctrl->dsi_irq_mask & term)) {
 		spin_unlock_irqrestore(&ctrl->irq_lock, flags);
 		return;
@@ -195,10 +187,12 @@ void mdss_dsi_disable_irq(struct mdss_dsi_ctrl_pdata *ctrl, u32 term)
 	if (ctrl->dsi_irq_mask == 0) {
 		MDSS_XLOG(ctrl->ndx, term);
 		mdss_disable_irq(ctrl->dsi_hw);
+ #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
+ 	xlog(__func__, ctrl->ndx, term, 0, 0, 0, 0);
+ #endif
 		pr_debug("%s: IRQ Disable, ndx=%d mask=%x term=%x\n", __func__,
 			ctrl->ndx, (int)ctrl->dsi_irq_mask, (int)term);
 	}
-	MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, current->pid);
 	spin_unlock_irqrestore(&ctrl->irq_lock, flags);
 }
 
@@ -209,22 +203,20 @@ void mdss_dsi_disable_irq(struct mdss_dsi_ctrl_pdata *ctrl, u32 term)
 void mdss_dsi_disable_irq_nosync(struct mdss_dsi_ctrl_pdata *ctrl, u32 term)
 {
 	spin_lock(&ctrl->irq_lock);
-#if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
-	xlog(__func__, ctrl->ndx, term, ctrl->dsi_irq_mask, (u32)ctrl->dsi_hw, 0, 0xB);
-#endif
 	if (!(ctrl->dsi_irq_mask & term)) {
 		spin_unlock(&ctrl->irq_lock);
 		return;
 	}
 	ctrl->dsi_irq_mask &= ~term;
 	if (ctrl->dsi_irq_mask == 0) {
+		MDSS_XLOG(ctrl->ndx, term);
 		mdss_disable_irq_nosync(ctrl->dsi_hw);
+ #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
+ 		xlog(__func__,ctrl->ndx, term, 0, 0, 0, 0);
+ #endif
 		pr_debug("%s: IRQ Disable, ndx=%d mask=%x term=%x\n", __func__,
 			ctrl->ndx, (int)ctrl->dsi_irq_mask, (int)term);
 	}
-#if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
-	xlog(__func__, ctrl->ndx, term, ctrl->dsi_irq_mask, (u32)ctrl->dsi_hw, 0, 0xE);
-#endif
 	spin_unlock(&ctrl->irq_lock);
 }
 void mdss_dsi_cmd_test_pattern(struct mdss_panel_data *pdata)
@@ -268,6 +260,8 @@ void mdss_dsi_host_init(struct mipi_panel_info *pinfo,
 	dsi_ctrl_base = ctrl_pdata->ctrl_base;
 
 	pinfo->rgb_swap = DSI_RGB_SWAP_RGB;
+
+	ctrl_pdata->panel_mode = pinfo->mode;
 
 	if (pinfo->mode == DSI_VIDEO_MODE) {
 		data = 0;
@@ -1073,6 +1067,25 @@ void dumpreg(void)
 #endif
 	pr_err("%s: ============= END ==============\n", __func__);
 }
+void mdss_dsi_debug_check_te(void)
+{
+	u8 rc, te_count = 0;
+	u8 te_max = 250;
+
+	pr_info(" ============ start waiting for TE ============\n");
+	for (te_count = 0 ; te_count < te_max ; te_count++)
+	{
+		rc = gpio_get_value(ctrl_backup->disp_te_gpio);
+		if(rc != 0)
+		{
+			pr_info("%s: gpio_get_value(ctrl_pdata->disp_te_gpio) = %d, te_count = %d\n",
+				__func__, rc, te_count);
+			break;
+		}
+		udelay(80);
+	}
+	pr_info(" ============ finish waiting for TE ============\n");
+}
 /*
  * mipi_dsi_cmds_single_tx:
  * thread context only
@@ -1336,9 +1349,7 @@ void mdss_dsi_cmd_mdp_start(struct mdss_dsi_ctrl_pdata *ctrl)
 	ctrl->mdp_busy = true;
 	ctrl_backup = ctrl;
 	INIT_COMPLETION(ctrl->mdp_comp);
-#if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
-	xlog(__func__, ctrl->ndx, ctrl->mdp_busy, 0, 0, 0, current->pid);
-#endif
+	MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, current->pid);
 	spin_unlock_irqrestore(&ctrl->mdp_lock, flag);
 }
 
@@ -1402,8 +1413,8 @@ void mdss_dsi_cmd_mdp_busy(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	pr_debug("%s: start pid=%d\n",
 				__func__, current->pid);
-	MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, current->pid, XLOG_FUNC_ENTRY);
 
+	MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, current->pid, XLOG_FUNC_ENTRY);
 	spin_lock_irqsave(&ctrl->mdp_lock, flags);
 	if (ctrl->mdp_busy == true)
 		need_wait++;
@@ -1491,7 +1502,7 @@ int mdss_dsi_cmdlist_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 }
 
 void mdss_mdp_clk_ctrl(int enable, int isr);
-void mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
+int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 {
 	struct dcs_cmd_req *req;
 	int rc = 0;
@@ -1528,10 +1539,6 @@ void mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	mdss_bus_scale_set_quota(MDSS_HW_DSI0, SZ_1M, SZ_1M);
 	mdss_bus_bandwidth_ctrl(1);
 
-#if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
-	xlog(__func__,ctrl->ndx, from_mdp, 0, 0, 0, current->pid);
-#endif
-
 	pr_debug("%s:  from_mdp=%d pid=%d\n", __func__, from_mdp, current->pid);
 	mdss_dsi_clk_ctrl(ctrl, 1);
 
@@ -1542,9 +1549,9 @@ void mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 		return;
 	}
 	if (req->flags & CMD_REQ_RX)
-		mdss_dsi_cmdlist_rx(ctrl, req);
+		ret = mdss_dsi_cmdlist_rx(ctrl, req);
 	else if (req->flags & CMD_REQ_SINGLE_TX)
-		mdss_dsi_cmds_single_tx(ctrl,req->cmds,req->cmds_cnt);
+		ret = mdss_dsi_cmds_single_tx(ctrl,req->cmds,req->cmds_cnt);
 	else
 		mdss_dsi_cmdlist_tx(ctrl, req);
 
@@ -1567,6 +1574,8 @@ need_lock:
 #endif
 #endif
 	pr_debug("%s : -- \n",__func__);
+
+	return ret;
 }
 
 static int dsi_event_thread(void *data)
@@ -1608,10 +1617,12 @@ static int dsi_event_thread(void *data)
 			mdss_dsi_pll_relock(ctrl);
 
 		if (todo & DSI_EV_MDP_FIFO_UNDERFLOW) {
+			mutex_lock(&ctrl->mutex);
 			if (ctrl->recovery) {
 				mdss_dsi_sw_reset_restore(ctrl);
 				ctrl->recovery->fxn(ctrl->recovery->data);
 			}
+			mutex_unlock(&ctrl->mutex);
 		}
 
 		if (todo & DSI_EV_MDP_BUSY_RELEASE) {
@@ -1792,7 +1803,6 @@ irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 	}
 
 	if (isr & DSI_INTR_VIDEO_DONE) {
-		MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, isr, 0x98);
 		spin_lock(&ctrl->mdp_lock);
 		mdss_dsi_disable_irq_nosync(ctrl, DSI_VIDEO_TERM);
 		complete(&ctrl->video_comp);
@@ -1800,7 +1810,7 @@ irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 	}
 
 	if (isr & DSI_INTR_CMD_DMA_DONE) {
-		MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, isr, 0x99);
+		MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, isr, 0x98);
 		spin_lock(&ctrl->mdp_lock);
 #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
 	xlog(__func__,ctrl->ndx, ctrl->mdp_busy, isr, 0, 0, 0x98);
@@ -1811,6 +1821,7 @@ irqreturn_t mdss_dsi_isr(int irq, void *ptr)
 	}
 
 	if (isr & DSI_INTR_CMD_MDP_DONE) {
+		MDSS_XLOG(ctrl->ndx, ctrl->mdp_busy, isr, 0x99);
 		spin_lock(&ctrl->mdp_lock);
 #if defined (CONFIG_FB_MSM_MDSS_DSI_DBG)
 	xlog(__func__, ctrl->ndx, ctrl->mdp_busy, isr, 0, 0, 0x99);

@@ -3392,7 +3392,6 @@ static int __devinit sdhci_msm_probe(struct platform_device *pdev)
 		}
 	}
 
-	device_enable_async_suspend(&pdev->dev);
 	/* Successful initialization */
 	goto out;
 
