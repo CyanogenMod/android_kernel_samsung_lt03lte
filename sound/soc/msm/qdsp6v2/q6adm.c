@@ -1210,13 +1210,8 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		if (perf_mode == ULTRA_LOW_LATENCY_PCM_MODE) {
 			open.topology_id = NULL_COPP_TOPOLOGY;
 			rate = ULL_SUPPORTED_SAMPLE_RATE;
-			open.bit_width = ULL_SUPPORTED_BITS_PER_SAMPLE;
 			if(channel_mode > ULL_MAX_SUPPORTED_CHANNEL)
 				channel_mode = ULL_MAX_SUPPORTED_CHANNEL;
-		} else if (perf_mode == LOW_LATENCY_PCM_MODE) {
-			if ((open.topology_id == DOLBY_ADM_COPP_TOPOLOGY_ID) ||
-			    (open.topology_id == SRS_TRUMEDIA_TOPOLOGY_ID))
-				open.topology_id = DEFAULT_COPP_TOPOLOGY;
 		}
 #ifdef CONFIG_SND_SOC_MAX98504 // Vinay
         /* if the port_id matches SLIMBUS_0_RX and if the topology has
@@ -1234,6 +1229,18 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 
         pr_err("add topo flag value %d \n", add_topo_flag);
 #endif
+
+		if (perf_mode == ULTRA_LOW_LATENCY_PCM_MODE) {
+			open.topology_id = NULL_COPP_TOPOLOGY;
+			rate = ULL_SUPPORTED_SAMPLE_RATE;
+			open.bit_width = ULL_SUPPORTED_BITS_PER_SAMPLE;
+			if(channel_mode > ULL_MAX_SUPPORTED_CHANNEL)
+				channel_mode = ULL_MAX_SUPPORTED_CHANNEL;
+		} else if (perf_mode == LOW_LATENCY_PCM_MODE) {
+			if ((open.topology_id == DOLBY_ADM_COPP_TOPOLOGY_ID) ||
+			    (open.topology_id == SRS_TRUMEDIA_TOPOLOGY_ID))
+				open.topology_id = DEFAULT_COPP_TOPOLOGY;
+		}
 		open.dev_num_channel = channel_mode & 0x00FF;
 		open.bit_width = bits_per_sample;
 		WARN_ON(perf_mode == ULTRA_LOW_LATENCY_PCM_MODE &&

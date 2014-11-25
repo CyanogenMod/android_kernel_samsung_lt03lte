@@ -2323,7 +2323,8 @@ static int a3xx_create_gmem_shadow(struct adreno_device *adreno_dev,
 	calc_gmemsize(&drawctxt->context_gmem_shadow, adreno_dev->gmem_size);
 	tmp_ctx.gmem_base = adreno_dev->gmem_base;
 
-	result = kgsl_allocate(&drawctxt->context_gmem_shadow.gmemshadow,
+	result = kgsl_allocate(&(adreno_dev->dev),
+		&drawctxt->context_gmem_shadow.gmemshadow,
 		drawctxt->base.proc_priv->pagetable,
 		drawctxt->context_gmem_shadow.size);
 
@@ -2379,7 +2380,7 @@ static int a3xx_drawctxt_create(struct adreno_device *adreno_dev,
 	}
 	drawctxt->ops = &a3xx_legacy_ctx_ops;
 
-	ret = kgsl_allocate(&drawctxt->gpustate,
+	ret = kgsl_allocate(&(adreno_dev->dev), &drawctxt->gpustate,
 		drawctxt->base.proc_priv->pagetable, CONTEXT_SIZE);
 
 	if (ret)
@@ -4138,6 +4139,7 @@ static void a3xx_protect_init(struct kgsl_device *device)
 
 	/* CP registers */
 	adreno_set_protected_registers(device, &index, 0x1C0, 5);
+	adreno_set_protected_registers(device, &index, 0x1EC, 1);
 	adreno_set_protected_registers(device, &index, 0x1F6, 1);
 	adreno_set_protected_registers(device, &index, 0x1F8, 2);
 	adreno_set_protected_registers(device, &index, 0x45E, 2);
@@ -4577,6 +4579,8 @@ static unsigned int a3xx_register_offsets[ADRENO_REG_REGISTER_MAX] = {
 	ADRENO_REG_DEFINE(ADRENO_REG_TC_CNTL_STATUS, REG_TC_CNTL_STATUS),
 	ADRENO_REG_DEFINE(ADRENO_REG_TP0_CHICKEN, REG_TP0_CHICKEN),
 	ADRENO_REG_DEFINE(ADRENO_REG_RBBM_RBBM_CTL, A3XX_RBBM_RBBM_CTL),
+	ADRENO_REG_DEFINE(ADRENO_REG_UCHE_INVALIDATE0,
+			A3XX_UCHE_CACHE_INVALIDATE0_REG),
 };
 
 struct adreno_reg_offsets a3xx_reg_offsets = {

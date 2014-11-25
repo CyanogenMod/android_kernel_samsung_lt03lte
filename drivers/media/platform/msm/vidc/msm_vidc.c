@@ -25,6 +25,13 @@
 
 #define MAX_EVENTS 30
 
+static int open_video_instance = 0;
+
+int msm_vidc_instance_open(void)
+{
+	return open_video_instance;
+}
+
 static int get_poll_flags(void *instance)
 {
 	struct msm_vidc_inst *inst = instance;
@@ -982,12 +989,12 @@ int msm_vidc_dqbuf(void *instance, struct v4l2_buffer *b)
 		}
 	}
 
-	if (!buffer_info && inst->map_output_buffer) {
-		dprintk(VIDC_ERR,
-			"%s: error - no buffer info found in registered list\n",
-			__func__);
-		return -EINVAL;
-	}
+	if (!buffer_info) { 
+		dprintk(VIDC_ERR, 
+		"%s: error - no buffer info found in registered list\n", 
+		__func__); 
+		return -EINVAL; 
+	} 
 
 	if (is_dynamic_output_buffer_mode(b, inst)) {
 		mutex_lock(&inst->lock);
@@ -1223,6 +1230,7 @@ void *msm_vidc_open(int core_id, int session_type)
 
 	pr_info(VIDC_DBG_TAG "Opening video instance: %p, %d\n",
 		VIDC_INFO, inst, session_type);
+	open_video_instance = 1;
 	mutex_init(&inst->sync_lock);
 	mutex_init(&inst->bufq[CAPTURE_PORT].lock);
 	mutex_init(&inst->bufq[OUTPUT_PORT].lock);
@@ -1231,7 +1239,6 @@ void *msm_vidc_open(int core_id, int session_type)
 	INIT_LIST_HEAD(&inst->pendingq);
 	INIT_LIST_HEAD(&inst->internalbufs);
 	INIT_LIST_HEAD(&inst->persistbufs);
-	INIT_LIST_HEAD(&inst->ctrl_clusters);
 	INIT_LIST_HEAD(&inst->registered_bufs);
 	INIT_LIST_HEAD(&inst->outputbufs);
 	init_waitqueue_head(&inst->kernel_event_queue);
@@ -1282,9 +1289,9 @@ void *msm_vidc_open(int core_id, int session_type)
 
 	setup_event_queue(inst, &core->vdev[session_type].vdev);
 
-	mutex_lock(&core->sync_lock);
+	mutex_lock(&core->lock);
 	list_add_tail(&inst->list, &core->instances);
-	mutex_unlock(&core->sync_lock);
+	mutex_unlock(&core->lock);
 	return inst;
 fail_init:
 	vb2_queue_release(&inst->bufq[OUTPUT_PORT].vb2_bufq);
@@ -1378,13 +1385,13 @@ int msm_vidc_close(void *instance)
 	}
 
 	core = inst->core;
-	mutex_lock(&core->sync_lock);
+	mutex_lock(&core->lock);
 	list_for_each_safe(ptr, next, &core->instances) {
 		temp = list_entry(ptr, struct msm_vidc_inst, list);
 		if (temp == inst)
 			list_del(&inst->list);
 	}
-	mutex_unlock(&core->sync_lock);
+	mutex_unlock(&core->lock);
 
 	if (inst->session_type == MSM_VIDC_DECODER)
 		msm_vdec_ctrl_deinit(inst);
@@ -1407,6 +1414,8 @@ int msm_vidc_close(void *instance)
 	msm_smem_delete_client(inst->mem_client);
 	pr_info(VIDC_DBG_TAG "Closed video instance: %p\n", VIDC_INFO, inst);
 	kfree(inst);
+
+	open_video_instance = 0;
 
 	return 0;
 }
