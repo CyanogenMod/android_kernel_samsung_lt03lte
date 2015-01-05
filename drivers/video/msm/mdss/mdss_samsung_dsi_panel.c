@@ -857,8 +857,8 @@ static ssize_t mipi_samsung_disp_acl_show(struct device *dev,
 {
 	int rc;
 
-	rc = snprintf((char *)buf, PAGE_SIZE, "%d\n", msd.dstat.acl_on);
-	pr_info("acl status: %d\n", *buf);
+	rc = snprintf(buf, 3, "%d\n", msd.dstat.acl_on);
+	pr_info("acl status: %c\n", *buf);
 
 	return rc;
 }
