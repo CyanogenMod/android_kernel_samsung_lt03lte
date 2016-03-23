@@ -837,7 +837,7 @@ static irqreturn_t flip_cover_detect(int irq, void *dev_id)
 		ddata->flip_cover, ddata->flip_cover?"on":"off");
 
 	input_report_switch(ddata->input,
-		SW_FLIP, ddata->flip_cover);
+		SW_LID, ddata->flip_cover);
 	input_sync(ddata->input);
 out:
 	return IRQ_HANDLED;
